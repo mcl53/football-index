@@ -1,0 +1,9 @@
+secrets.py
+*.pyc
+*.csv
+media_scores/*
+player_prices/*
+price_changes/*
+*.p
+__pycache__/*
+.DS_Store
