@@ -7,3 +7,4 @@ price_changes/*
 *.p
 __pycache__/*
 .DS_Store
+*.xml

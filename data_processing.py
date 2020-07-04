@@ -1,4 +1,8 @@
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+
+tp = ThreadPoolExecutor()
+threads = []
 
 
 def json_to_dataframe(json, json_identifiers, columns):
@@ -11,3 +15,10 @@ def json_to_dataframe(json, json_identifiers, columns):
 		df = df.append({columns[0]: i[json_identifiers[0]], columns[1]: i[json_identifiers[1]]}, ignore_index=True)
 		
 	return df
+
+
+def threaded_api_call(func, returns_player_json=False):
+	def wrapper(x):
+		global tp, threads
+		thread = tp.submit(func, x)
+		# separate this out into a separate service

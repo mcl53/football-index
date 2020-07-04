@@ -1,6 +1,4 @@
-import fi_api_calls
 import datetime
-from dateutil import relativedelta
 import os
 import pandas as pd
 from sklearn.neural_network import MLPRegressor
@@ -8,140 +6,14 @@ from sklearn.model_selection import train_test_split
 from random import randint
 import pickle
 from secrets import nn_default, nn_optimal, timezone
-import pytz
-import file_system
-
+from file_system import read_player_prices, save_media_scores, read_media_scores, update_players
+from utils import return_dates
 
 import warnings
 warnings.filterwarnings("ignore")
 
+import pytz
 tz = pytz.timezone(timezone)
-
-
-def return_dates(months_prior=1):
-	date = datetime.datetime.now()
-	one_month_ago = date + relativedelta.relativedelta(months=-months_prior)
-	delta = date - one_month_ago
-	dates = []
-	
-	for i in range(1, delta.days + 1):
-		this_date = one_month_ago + datetime.timedelta(days=i)
-		this_date_string = convert_date_to_str(this_date)
-		dates.append(this_date_string)
-	
-	return dates
-
-
-def convert_date_to_str(date):
-	year = date.year
-	month = "{:02d}".format(date.month)
-	day = "{:02d}".format(date.day)
-	date_string = f"{year}{month}{day}"
-	return date_string
-	
-
-def save_media_scores(dates):
-	for date in dates:
-		exists = os.path.exists(f"media_scores/{date}.csv")
-		if not exists:
-			media_scores = fi_api_calls.get_media_scores(date)
-			media_scores.to_csv(f"media_scores/{date}.csv", index=None)
-
-
-def read_media_scores(date):
-	media_scores = pd.read_csv(f"media_scores/{date}.csv")
-	return media_scores
-
-
-def update_players(players):
-	all_player_prices = fi_api_calls.get_player_price_history(players)
-
-	for player in all_player_prices:
-		player_name, player_prices = next(iter(player.items()))
-
-		save_player_prices(player_name, player_prices)
-
-
-def save_player_prices(player_name, player_prices):
-	exists = os.path.exists(f"player_prices/{player_name}.csv")
-	if exists:
-		old_player_prices = file_system.read_player_prices(player_name)
-		current_date = datetime.datetime.now()
-		current_date.replace(hour=0, minute=0, second=0, microsecond=0)
-		current_epoch = datetime.datetime.timestamp(current_date)
-		last_download_time = old_player_prices.iloc[len(old_player_prices) - 1]["time"]
-		if current_epoch - last_download_time > 86400:
-			new_prices_trimmed = player_prices.iloc[len(old_player_prices):]
-			player_prices = player_prices.append(new_prices_trimmed)
-	
-	if len(player_prices) > 0:
-		player_prices.to_csv(f"player_prices/{player_name}.csv", index=False)
-
-
-def compile_data(player, start_date):
-	update_players([player])
-	
-	year = int(start_date[0:4])
-	month = int(start_date[4:6])
-	day = int(start_date[6:])
-	date = datetime.datetime(year, month, day)
-	
-	try:
-		player_prices = fi_api_calls.read_player_prices(player)
-	except FileNotFoundError:
-		return
-	
-	dataframe_columns = ["date", "start_price", "end_price", "24h", "48h", "media_score"]
-	
-	price_change = pd.DataFrame(columns=dataframe_columns)
-	
-	time_zero = player_prices["time"].iloc[0]
-	time_zero_date = datetime.datetime.fromtimestamp(time_zero)
-	hours_off = time_zero_date.hour // 4
-	time_zero_date = time_zero_date.replace(hour=0)
-	
-	while date != datetime.datetime.now().date():
-		str_date = convert_date_to_str(date)
-		try:
-			media_scores = read_media_scores(str_date)
-		except FileNotFoundError:
-			break
-		
-		for i, name in enumerate(media_scores["player_name"]):
-			if name == player:
-				diff = date - time_zero_date
-				lots_of_4_hours = int(diff.total_seconds() // 14400)
-				lots_of_4_hours -= hours_off
-				start_price = player_prices["price"].iloc[lots_of_4_hours]
-				try:
-					end_price = player_prices["price"].iloc[lots_of_4_hours + 6]
-					one_day = player_prices["price"].iloc[lots_of_4_hours + 12]
-					two_days = player_prices["price"].iloc[lots_of_4_hours + 18]
-				except IndexError:
-					break
-				media_score = media_scores["score"].iloc[i]
-				media_day = pd.DataFrame([[str_date, start_price, end_price, one_day, two_days, media_score]], columns=dataframe_columns)
-				price_change = price_change.append(media_day, ignore_index=True)
-				break
-		date += datetime.timedelta(days=1)
-	file_name = f"{player}.csv"
-	price_change.to_csv(f"price_changes/{file_name}", index=False)
-	
-	
-def read_compiled_data():
-	all_player_data = pd.DataFrame(columns=["start_price", "end_price", "24h", "48h", "media_score"])
-	
-	for r, d, f in os.walk("price_changes"):
-		for file in f:
-			player_data = pd.read_csv(f"price_changes/{file}", index_col=None)
-			player_data = player_data.drop("date", axis=1)
-			if player_data.count(axis=1).iloc[0] != 5:
-				print("Contains NaN")
-				print(file)
-			else:
-				all_player_data = all_player_data.append(player_data, ignore_index=True)
-	
-	return all_player_data
 
 
 def train_network(data, hidden_layer_sizes, activation=nn_default["activation"], solver=nn_default["solver"], learning_rate=nn_default["learning_rate"], max_iter=nn_default["max_iter"], tol=nn_default["tol"], v=False):
@@ -229,7 +101,7 @@ def predict_stocks_to_buy(date, current_money):
 	for player_name in media_scores["player_name"]:
 		if os.path.exists(f"player_prices/{player_name}.csv"):
 			try:
-				data = file_system.read_player_prices(player_name)
+				data = read_player_prices(player_name)
 				start_price = data.loc[data["time"] == timestamp]["price"].iloc[0]
 				end_price = data.loc[data["time"] == (timestamp + 86400)]["price"].iloc[0]
 				media_score = media_scores.loc[media_scores["player_name"] == player_name]["score"].iloc[0]

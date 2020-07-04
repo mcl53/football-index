@@ -1,4 +1,5 @@
 import requests
+import os
 import pandas as pd
 import datetime
 import threading
@@ -6,7 +7,6 @@ import time
 import queue
 import concurrent.futures
 from data_processing import json_to_dataframe
-from file_system import player_prices_need_update
 from secrets import x_access_token, top_players_endpoint, top_players_extra_params, media_scores_endpoint, media_scores_extra_params, price_history_endpoint
 
 current_api_calls = 0
@@ -80,8 +80,6 @@ def get_player_price_history(player_names):
 	all_urls = []
 	
 	for player_name in player_names:
-		if not player_prices_need_update(player_name):
-			continue
 
 		individual_names = player_name.split(" ")
 		name_id = ""
