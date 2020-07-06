@@ -8,3 +8,5 @@ price_changes/*
 __pycache__/*
 .DS_Store
 *.xml
+data_collector/node_modules/*
+data_collector/secrets.js
