@@ -35,12 +35,14 @@ function saveMediaScores(json, dateStr) {
     const fileContents = jsonToCsv(json, ["name", "score"]);
     const fileName = `../media_scores/${dateStr}.csv`;
 
-    fs.writeFile(fileName, fileContents, (err, written) => {
+    fs.writeFile(fileName, fileContents, err => {
         if (err) {
             console.log(err);
             return;
         } else {
-            console.log(`${written} bytes to file ${fileName}`)
+            console.log(`Written to file ${fileName}`)
         }
     });
 }
+
+module.exports.saveMediaScores = saveMediaScores;
