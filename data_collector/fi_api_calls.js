@@ -4,7 +4,7 @@ const fetch = require("node-fetch")
 currentApiCalls = 100;
 firstCall = 0;
 
-async function sendRequest(url, responseHandler, resHandlerArgs) {
+export async function sendRequest(url, responseHandler, resHandlerArgs) {
     /* Check to see if max API calls have been reached first.
     If we have, wait until at least 1 minute after to make another 100.
     Do this first because here we set API calls to 0 and then next get the start time for the next 100.
@@ -12,7 +12,7 @@ async function sendRequest(url, responseHandler, resHandlerArgs) {
    if (currentApiCalls == 100) {
        currentApiCalls = 0;
        let lastCall = (new Date().getTime()) / 1000;
-       while (lastCall < firstCall) {
+       while (lastCall < firstCall + 60) {
            lastCall = (new Date().getTime()) / 1000;
        }
    }
@@ -43,3 +43,4 @@ function testPromiseResponse(res) {
 }
 
 sendRequest(`${secrets.media_scores_endpoint}20200701${secrets.media_scores_extra_params}`, jsonToCsv, ["name", "score"]);
+

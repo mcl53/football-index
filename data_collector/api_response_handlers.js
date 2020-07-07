@@ -1,3 +1,5 @@
+const fs = require("fs");
+
 function jsonToCsv(json, headers) {
     /* This function expects to be passed a number of additional arguments greater than 1, 
     where each argument is the name of a column header for the csv file */
@@ -27,4 +29,18 @@ function jsonToCsv(json, headers) {
     //         console.log(`Bytes written: ${written}`);
     //     }
     // });
+}
+
+function saveMediaScores(json, dateStr) {
+    const fileContents = jsonToCsv(json, ["name", "score"]);
+    const fileName = `../media_scores/${dateStr}.csv`;
+
+    fs.writeFile(fileName, fileContents, (err, written) => {
+        if (err) {
+            console.log(err);
+            return;
+        } else {
+            console.log(`${written} bytes to file ${fileName}`)
+        }
+    });
 }
