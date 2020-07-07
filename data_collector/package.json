@@ -4,7 +4,7 @@
   "description": "Downloads and saves data for football-index trading model",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npx ava",
     "start": "node index.js"
   },
   "author": "mcl53",
@@ -12,5 +12,8 @@
   "dependencies": {
     "fs": "0.0.1-security",
     "node-fetch": "^2.6.0"
+  },
+  "devDependencies": {
+    "ava": "^3.10.0"
   }
 }
