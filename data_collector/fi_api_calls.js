@@ -24,13 +24,16 @@ async function sendRequest(url, responseHandler, resHandlerArgs) {
    currentApiCalls += 1;
 
    const params = {
-       "Accept": "application/json",
+       "Accept": "application/json; charset=utf-8",
        "x-access-token": secrets.x_access_token
    };
 
    try {
-    let response = await fetch(url, {headers: params});
+    const encodedUrl = encodeURI(url);
+    let response = await fetch(encodedUrl, {headers: params, compress: false});
+    
     let data = await response.json();
+    
     responseHandler(data, resHandlerArgs);
    } catch(err) {
     console.log(err);

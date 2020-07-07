@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "npx ava",
-    "start": "node index.js"
+    "start": "node main.js"
   },
   "author": "mcl53",
   "license": "ISC",
   "dependencies": {
+    "csv-parser": "^2.3.3",
     "fs": "0.0.1-security",
     "node-fetch": "^2.6.0"
   },

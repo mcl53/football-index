@@ -5,7 +5,11 @@ function jsonToCsv(json, headers) {
     where each argument is the name of a column header for the csv file */
 
     // All json from this API contains data within an object assigned to the key 'items'
-    const listOfObjects = json.items;
+    let listOfObjects = json.items;
+
+    if (!listOfObjects) {
+        listOfObjects = json.days;
+    }
     
     let toCsv = headers.join(",");
 
@@ -19,20 +23,12 @@ function jsonToCsv(json, headers) {
         toCsv += newLine.join(",")
         toCsv.slice(0, -1);
     });
-    // console.log(toCsv);
+
     return toCsv;
-    // fs.writeFile("./test.csv", toCsv, (err, written) => {
-    //     if (err) {
-    //         console.log(err);
-    //         return;
-    //     } else {
-    //         console.log(`Bytes written: ${written}`);
-    //     }
-    // });
 }
 
 function saveMediaScores(json, dateStr) {
-    const fileContents = jsonToCsv(json, ["name", "score"]);
+    const fileContents = jsonToCsv(json, ["name", "urlname", "score"]);
     const fileName = `../media_scores/${dateStr}.csv`;
 
     fs.writeFile(fileName, fileContents, err => {
@@ -45,4 +41,20 @@ function saveMediaScores(json, dateStr) {
     });
 }
 
-module.exports.saveMediaScores = saveMediaScores;
+function savePlayerPrices(json, playerName) {
+    const fileContents = jsonToCsv(json, ["timestamp", "close"]);
+    const fileName = `../player_prices/${playerName}.csv`;
+
+    fs.writeFile(fileName, fileContents, err => {
+        if (err) {
+            console.log(err);
+        } else {
+            console.log(`Written to file ${fileName}`);
+        }
+    });
+}
+
+module.exports = {
+    saveMediaScores: saveMediaScores,
+    savePlayerPrices: savePlayerPrices
+};
