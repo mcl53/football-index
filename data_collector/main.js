@@ -4,9 +4,18 @@ const secrets = require("./secrets");
 const fs = require("fs");
 const csv = require("csv-parser");
 
+let currentApiRequests = 0;
+const maxApiRequests = 40;
+
+function sleep(ms) {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+}
+
 function todaysDateString() {
     const todaysDate = new Date();
-    const day = String(todaysDate.getDate()).padStart(2, "0");
+    const day = String(todaysDate.getDate() - 1).padStart(2, "0");
     const month = String(todaysDate.getMonth() + 1).padStart(2, "0");
     const year = String(todaysDate.getFullYear());
     const dateString = year + month + day;
@@ -14,11 +23,12 @@ function todaysDateString() {
     return dateString;
 }
 
-function getNewMediaScores() {
-    const dateString = todaysDateString();
+async function getNewMediaScores(dateString, callback) {
     url = `${secrets.media_scores_endpoint}${dateString}${secrets.media_scores_extra_params}`;
 
-    api.sendRequest(url, handlers.saveMediaScores, dateString);
+    await api.sendRequest(url, handlers.saveMediaScores, dateString);
+
+    callback(dateString);
 }
 
 function updatePlayerPrices(playerName) {
@@ -27,16 +37,24 @@ function updatePlayerPrices(playerName) {
     api.sendRequest(url, handlers.savePlayerPrices, playerName);
 }
 
-function updateTodaysPlayers() {
-    const dateString = todaysDateString();
-    fileName = `../media_scores/${dateString}.csv`;
+function updateTodaysPlayers(dateString) {
+    fileName = `${secrets.basePath}/media_scores/${dateString}.csv`;
 
     fs.createReadStream(fileName)
         .pipe(csv())
-        .on("data", row => {
+        .on("data", async row => {
+            if (currentApiRequests >= maxApiRequests) {
+                let sleepTimes = Math.floor(currentApiRequests / maxApiRequests);
+                await sleep(60000 * sleepTimes);
+            }
             updatePlayerPrices(row.urlname);
+            currentApiRequests += 1;
         });
 }
 
-getNewMediaScores();
-updateTodaysPlayers();
+function execute() {
+    const dateStr = todaysDateString();
+    getNewMediaScores(dateStr, updateTodaysPlayers);
+}
+
+execute();

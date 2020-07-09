@@ -1,4 +1,5 @@
 const fs = require("fs");
+const secrets = require("./secrets");
 
 function jsonToCsv(json, headers) {
     /* This function expects to be passed a number of additional arguments greater than 1, 
@@ -29,7 +30,7 @@ function jsonToCsv(json, headers) {
 
 function saveMediaScores(json, dateStr) {
     const fileContents = jsonToCsv(json, ["name", "urlname", "score"]);
-    const fileName = `../media_scores/${dateStr}.csv`;
+    const fileName = `${secrets.basePath}/media_scores/${dateStr}.csv`;
 
     fs.writeFile(fileName, fileContents, err => {
         if (err) {
@@ -43,7 +44,7 @@ function saveMediaScores(json, dateStr) {
 
 function savePlayerPrices(json, playerName) {
     const fileContents = jsonToCsv(json, ["timestamp", "close"]);
-    const fileName = `../player_prices/${playerName}.csv`;
+    const fileName = `${secrets.basePath}/player_prices/${playerName}.csv`;
 
     fs.writeFile(fileName, fileContents, err => {
         if (err) {
