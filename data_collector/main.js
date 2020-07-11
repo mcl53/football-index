@@ -5,7 +5,7 @@ const fs = require("fs");
 const csv = require("csv-parser");
 
 let currentApiRequests = 0;
-const maxApiRequests = 40;
+const maxApiRequests = 10;
 
 function sleep(ms) {
     return new Promise(resolve => {
@@ -43,12 +43,12 @@ function updateTodaysPlayers(dateString) {
     fs.createReadStream(fileName)
         .pipe(csv())
         .on("data", async row => {
-            if (currentApiRequests >= maxApiRequests) {
+            currentApiRequests += 1;
+            if (currentApiRequests > maxApiRequests) {
                 let sleepTimes = Math.floor(currentApiRequests / maxApiRequests);
-                await sleep(60000 * sleepTimes);
+                await sleep(20000 * sleepTimes);
             }
             updatePlayerPrices(row.urlname);
-            currentApiRequests += 1;
         });
 }
 

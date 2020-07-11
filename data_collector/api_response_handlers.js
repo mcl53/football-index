@@ -28,18 +28,16 @@ function jsonToCsv(json, headers) {
     return toCsv;
 }
 
-function saveMediaScores(json, dateStr) {
+async function saveMediaScores(json, dateStr) {
     const fileContents = jsonToCsv(json, ["name", "urlname", "score"]);
     const fileName = `${secrets.basePath}/media_scores/${dateStr}.csv`;
 
-    fs.writeFile(fileName, fileContents, err => {
-        if (err) {
-            console.log(err);
-            return;
-        } else {
-            console.log(`Written to file ${fileName}`)
-        }
-    });
+    try {
+        console.log(`Writing to file ${fileName}`);
+        return await fs.promises.writeFile(fileName, fileContents);
+    } catch(err) {
+        console.log(err);
+    }
 }
 
 function savePlayerPrices(json, playerName) {

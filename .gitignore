@@ -10,3 +10,4 @@ __pycache__/*
 *.xml
 data_collector/node_modules/*
 data_collector/secrets.js
+*.log
