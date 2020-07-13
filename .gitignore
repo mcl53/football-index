@@ -11,3 +11,4 @@ __pycache__/*
 data_collector/node_modules/*
 data_collector/secrets.js
 *.log
+.vscode/*

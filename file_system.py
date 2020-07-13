@@ -1,23 +1,7 @@
 import os
 from datetime import datetime
 import pandas as pd
-from fi_api_calls import get_media_scores, get_player_price_history
-
-
-def save_player_prices(player_name, player_prices):
-	exists = os.path.exists(f"player_prices/{player_name}.csv")
-	if exists:
-		old_player_prices = read_player_prices(player_name)
-		current_date = datetime.now()
-		current_date.replace(hour=0, minute=0, second=0, microsecond=0)
-		current_epoch = datetime.timestamp(current_date)
-		last_download_time = old_player_prices.iloc[len(old_player_prices) - 1]["time"]
-		if current_epoch - last_download_time > 86400:
-			new_prices_trimmed = player_prices.iloc[len(old_player_prices):]
-			player_prices = player_prices.append(new_prices_trimmed)
-	
-	if len(player_prices) > 0:
-		player_prices.to_csv(f"player_prices/{player_name}.csv", index=False)
+import utils
 
 
 def read_player_prices(player):
@@ -25,37 +9,67 @@ def read_player_prices(player):
 	return data
 
 
-def player_prices_need_update(player_name):
-	exists = os.path.exists(f"player_prices/{player_name}.csv")
-	if exists:
-		old_player_prices = read_player_prices(player_name)
-		current_date = datetime.now()
-		current_date.replace(hour=0, minute=0, second=0, microsecond=0)
-		current_epoch = datetime.timestamp(current_date)
-		last_download_time = old_player_prices.iloc[-1]["time"]
-		if current_epoch - last_download_time < 86400:
-			return False
-		else:
-			return True
-		
-
-def update_players(players):
-	all_player_prices = get_player_price_history(players)
-
-	for player in all_player_prices:
-		player_name, player_prices = next(iter(player.items()))
-
-		save_player_prices(player_name, player_prices)
-
-
-def save_media_scores(dates):
-	for date in dates:
-		exists = os.path.exists(f"media_scores/{date}.csv")
-		if not exists:
-			media_scores = get_media_scores(date)
-			media_scores.to_csv(f"media_scores/{date}.csv", index=None)
-
-
 def read_media_scores(date):
 	media_scores = pd.read_csv(f"media_scores/{date}.csv")
 	return media_scores
+
+
+def price_changes_for_date(datestr, future_prices=False):
+	media_scores = read_media_scores(datestr)
+	start_ts = utils.convert_datestr_to_timestamp(datestr)
+	end_ts = start_ts + 86400
+
+	columns = ["start_price", "end_price", "media_score"]
+
+	if future_prices:
+		one_ahead_ts = start_ts + (86400 * 2)
+		two_ahead_ts = start_ts + (86400 * 3)
+		columns += ["24h", "48h"]
+
+	date_info = pd.DataFrame(columns=columns)
+
+	for player in media_scores.iterrows():
+		player_name = player[1]["urlname"]
+		media_score = player[1]["score"]
+
+		player_prices = read_player_prices(player_name)
+
+		try:
+			start_price = player_prices[player_prices["timestamp"] == start_ts]["close"].iloc[0]
+			end_price = player_prices[player_prices["timestamp"] == end_ts]["close"].iloc[0]
+			player_data = [start_price, end_price, media_score]
+
+			if future_prices:
+				one_day_price = player_prices[player_prices["timestamp"] == one_ahead_ts]["close"].iloc[0]
+				two_day_price = player_prices[player_prices["timestamp"] == two_ahead_ts]["close"].iloc[0]
+				player_data += [one_day_price, two_day_price]
+		
+		except IndexError:
+			continue
+
+		player_df = pd.DataFrame([player_data], columns=columns)
+
+		date_info = date_info.append(player_df, ignore_index=True)
+
+	return date_info
+
+
+def read_all_data(dates_list=None):
+	if dates_list is None:
+		dates_list = utils.return_dates()
+	
+	all_data = pd.DataFrame(columns=["start_price", "end_price", "media_score", "24h", "48h"])
+
+	for date in dates_list[0:-1]:
+		this_date_prices = price_changes_for_date(date, future_prices=True)
+		all_data = all_data.append(this_date_prices, ignore_index=True)
+	
+	return all_data
+
+
+if __name__ == "__main__":
+	standard = price_changes_for_date("20200701")
+	with_future_prices = price_changes_for_date("20200701", future_prices=True)
+
+	print(standard.iloc[0])
+	print(with_future_prices.iloc[0])
