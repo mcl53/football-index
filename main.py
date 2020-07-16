@@ -45,8 +45,12 @@ def predict_stocks_to_buy(date, current_money):
 			
 			if predicted_data[0] > end_price or predicted_data[1] > end_price:
 				buy_price = end_price
-				actual24h = data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0]
-				actual48h = data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0]
+				try:
+					actual24h = data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0]
+					actual48h = data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0]
+				except IndexError as e:
+					print(timestamp, player_name)
+					raise(e)
 				if predicted_data[0] >= predicted_data[1]:
 					sell_at = "actual24h"
 					percent_gain = ((predicted_data[0] - buy_price) / buy_price) * 100
@@ -127,13 +131,11 @@ if __name__ == "__main__":
 	# train_network(all_data, nn_optimal["hidden_layer_sizes"], solver=nn_optimal["solver"], activation=nn_optimal["activation"], max_iter=nn_optimal["max_iter"], tol=nn_optimal["tol"])
 	# dates_list = dates_list[0:len(dates_list) // 2]
 	money = 1000
-	for date in dates_list:
-		if int(date) > 20200701:
-			break
+	for date in dates_list[0:-3]:
 		print(date)
 		change = predict_stocks_to_buy(date, money)
 		print(f"Actual profit: £{change}")
 		print()
 		money += change
-
+	
 	print(f"Total money after {no_months} month: £{money}")

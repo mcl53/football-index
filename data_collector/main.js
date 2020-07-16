@@ -28,7 +28,13 @@ async function getNewMediaScores(dateString, callback) {
 
     await api.sendRequest(url, handlers.saveMediaScores, dateString);
 
+    // Download new player data for the previous 2 days as this is used in model validation
+    let yesterday = String(parseInt(dateString) - 1);
+    let dayBefore = String(parseInt(dateString) - 2);
     callback(dateString);
+    callback(yesterday);
+    callback(dayBefore);
+    
 }
 
 function updatePlayerPrices(playerName) {
@@ -54,7 +60,9 @@ function updateTodaysPlayers(dateString) {
 
 function execute() {
     const dateStr = todaysDateString();
+    console.log(`Beginning script for ${dateStr}`);
     getNewMediaScores(dateStr, updateTodaysPlayers);
+    console.log(`Ending script for ${dateStr}`);
 }
 
 execute();
