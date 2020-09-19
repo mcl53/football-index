@@ -13,3 +13,4 @@ data_collector/secrets.js
 *.log
 .vscode/*
 *.txt
+.idea/football-index.iml

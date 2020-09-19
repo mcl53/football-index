@@ -28,5 +28,6 @@ def train_price_predictor(hidden_layer_sizes, activation=nn_default["activation"
 	with open("./price_prediction_model.p", "wb") as f:
 		pickle.dump(network, f)
 
+ 
 if __name__ == "__main__":
 	train_price_predictor(nn_optimal["hidden_layer_sizes"])

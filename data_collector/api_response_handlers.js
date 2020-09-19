@@ -29,7 +29,7 @@ function jsonToCsv(json, headers) {
 }
 
 async function saveMediaScores(json, dateStr) {
-    const fileContents = jsonToCsv(json, ["name", "urlname", "score"]);
+    const fileContents = jsonToCsv(json, ["name", "urlname", "score", "scoreSell"]);
     const fileName = `${secrets.basePath}/media_scores/${dateStr}.csv`;
 
     try {

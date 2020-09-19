@@ -19,7 +19,7 @@ def price_changes_for_date(datestr, future_prices=False):
 	start_ts = utils.convert_datestr_to_timestamp(datestr)
 	end_ts = start_ts + 86400
 
-	columns = ["start_price", "end_price", "media_score"]
+	columns = ["start_price", "end_price", "media_score", "score_sell"]
 
 	if future_prices:
 		one_ahead_ts = start_ts + (86400 * 2)
@@ -31,13 +31,14 @@ def price_changes_for_date(datestr, future_prices=False):
 	for player in media_scores.iterrows():
 		player_name = player[1]["urlname"]
 		media_score = player[1]["score"]
+		score_sell = player[1]["scoreSell"]
 
 		player_prices = read_player_prices(player_name)
 
 		try:
 			start_price = player_prices[player_prices["timestamp"] == start_ts]["close"].iloc[0]
 			end_price = player_prices[player_prices["timestamp"] == end_ts]["close"].iloc[0]
-			player_data = [start_price, end_price, media_score]
+			player_data = [start_price, end_price, media_score, score_sell]
 
 			if future_prices:
 				one_day_price = player_prices[player_prices["timestamp"] == one_ahead_ts]["close"].iloc[0]

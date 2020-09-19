@@ -1,13 +1,13 @@
 import datetime
 import os
 import pandas as pd
-from sklearn.neural_network import MLPRegressor
-from sklearn.model_selection import train_test_split
-from random import randint
 import pickle
 from secrets import nn_default, nn_optimal, timezone
 from utils import return_dates
 from file_system import read_media_scores, read_player_prices
+import pprint
+from decimal import Decimal, ROUND_UP
+from generate_models import train_price_predictor
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -16,7 +16,7 @@ import pytz
 tz = pytz.timezone(timezone)
 
 
-def predict_stocks_to_buy(date, current_money):
+def predict_stocks_to_buy(date, current_money, v=False):
 	
 	year = int(date[0:4])
 	month = int(date[4:6])
@@ -31,53 +31,97 @@ def predict_stocks_to_buy(date, current_money):
 	with open("./price_prediction_model.p", "rb") as f:
 		model = pickle.load(f)
 
-	players_to_buy_columns = ["player", "buy_price", "predicted24h", "predicted48h", "actual24h", "actual48h", "sell_at", "percent_gain"]
+	players_to_buy_columns = ["player", "buy_price", "predicted24h", "predicted48h", "actual24h", "actual48h", "sell_at", "percent_gain", "actual_gain"]
 	players_to_buy = pd.DataFrame(columns=players_to_buy_columns)
 	
+	if v:
+		print_columns = ["player", "pred_inc", "act_inc", "pred_percent", "act_percent", "pred_buy", "act_buy"]
+		print_info = pd.DataFrame(columns=print_columns)
+	
 	for player_name in media_scores["urlname"]:
-			data = read_player_prices(player_name)
+		data = read_player_prices(player_name)
+		try:
 			start_price = data.loc[data["timestamp"] == timestamp]["close"].iloc[0]
 			end_price = data.loc[data["timestamp"] == (timestamp + 86400)]["close"].iloc[0]
-			media_score = media_scores.loc[media_scores["urlname"] == player_name]["score"].iloc[0]
-			
-			test_data = pd.DataFrame([[start_price, end_price, media_score]], columns=["start_price", "end_price", "media_score"])
-			predicted_data = model.predict(test_data)[0]
-			
-			if predicted_data[0] > end_price or predicted_data[1] > end_price:
-				buy_price = end_price
-				try:
-					actual24h = data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0]
-					actual48h = data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0]
-				except IndexError as e:
-					print(timestamp, player_name)
-					raise(e)
-				if predicted_data[0] >= predicted_data[1]:
-					sell_at = "actual24h"
-					percent_gain = ((predicted_data[0] - buy_price) / buy_price) * 100
+		except IndexError:
+			continue
+		media_score = media_scores.loc[media_scores["urlname"] == player_name]["score"].iloc[0]
+		
+		test_data = pd.DataFrame([[start_price, end_price, media_score]], columns=["start_price", "end_price", "media_score"])
+		predicted_data = model.predict(test_data)[0]
+		
+		if predicted_data[0] > end_price or predicted_data[1] > end_price:
+			buy_price = end_price
+			try:
+				actual24h = Decimal(data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0]).quantize(Decimal(".01"), rounding=ROUND_UP)
+				actual48h = Decimal(data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0]).quantize(Decimal(".01"), rounding=ROUND_UP)
+			except IndexError as e:
+				print(timestamp, player_name)
+				raise(e)
+			if predicted_data[0] >= predicted_data[1]:
+				sell_at = "actual24h"
+				percent_gain = Decimal(((predicted_data[0] - buy_price) / buy_price) * 100).quantize(Decimal(".01"), rounding=ROUND_UP)
+				gain = Decimal(predicted_data[0] - buy_price).quantize(Decimal(".01"), rounding=ROUND_UP)
+			else:
+				sell_at = "actual48h"
+				percent_gain = Decimal(((predicted_data[1] - buy_price) / buy_price) * 100).quantize(Decimal(".01"), rounding=ROUND_UP)
+				gain = Decimal(predicted_data[1] - buy_price).quantize(Decimal(".01"), rounding=ROUND_UP)
+			buy_price = Decimal(buy_price).quantize(Decimal(".01"), rounding=ROUND_UP)
+			append = pd.DataFrame([[player_name, buy_price, predicted_data[0], predicted_data[1], actual24h, actual48h, sell_at, percent_gain, gain]], columns=players_to_buy_columns)
+			players_to_buy = players_to_buy.append(append)
+		
+			if v:
+				end_price = Decimal(end_price).quantize(Decimal(".01"), rounding=ROUND_UP)
+				pred_buy_price = Decimal((max(predicted_data))).quantize(Decimal(".01"), rounding=ROUND_UP)
+				actual_buy_price = Decimal(max(
+					[data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0],
+					data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0]]
+				)).quantize(Decimal(".01"), rounding=ROUND_UP)
+				pred_increase = Decimal(pred_buy_price - end_price).quantize(Decimal(".01"), rounding=ROUND_UP)
+				actual_increase = Decimal(actual_buy_price - end_price).quantize(Decimal(".01"), rounding=ROUND_UP)
+				pred_percentage = Decimal(pred_increase / end_price * 100).quantize(Decimal(".01"), rounding=ROUND_UP)
+				actual_percentage = Decimal(actual_increase / end_price * 100).quantize(Decimal(".01"), rounding=ROUND_UP)
+				if pred_buy_price > end_price:
+					if pred_buy_price == predicted_data[0]:
+						pred_buy = "24h"
+					else:
+						pred_buy = "48h"
 				else:
-					sell_at = "actual48h"
-					percent_gain = ((predicted_data[1] - buy_price) / buy_price) * 100
-				append = pd.DataFrame([[player_name, buy_price, predicted_data[0], predicted_data[1], actual24h, actual48h, sell_at, percent_gain]], columns=players_to_buy_columns)
-				players_to_buy = players_to_buy.append(append)
+					pred_buy = None
 				
+				if actual_buy_price > end_price:
+					if actual_buy_price == predicted_data[0]:
+						actual_buy = "24h"
+					else:
+						actual_buy = "48h"
+				else:
+					actual_buy = None
+					
+				player_info = pd.DataFrame([[player_name, pred_increase, actual_increase, pred_percentage, actual_percentage, pred_buy, actual_buy]], columns=print_columns)
+				print_info = print_info.append(player_info)
+	
+	if v:
+		for row in print_info.iterrows():
+			print(row[1])
+		
 	if len(players_to_buy) > 0:
 		players_to_buy = players_to_buy.sort_values(by="percent_gain", ascending=False)
-		spendable = current_money / 5
-		max_players_to_buy = 20
+		spendable = Decimal(current_money / 5).quantize(Decimal(".01"), rounding=ROUND_UP)
+		max_players_to_buy = 5
 		top_index = 0
 		top_few = 0
 		bottom_index = 0
 		for i in range(len(players_to_buy)):
-			if players_to_buy.iloc[i]["percent_gain"] > 0:
+			if players_to_buy.iloc[i]["percent_gain"] > 0.3 and players_to_buy.iloc[i]["actual_gain"] > 0.02:
 				bottom_index = i + 1
-				top_few = sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"])
+				top_few = Decimal(sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"])).quantize(Decimal(".01"), rounding=ROUND_UP)
 				if top_few > spendable:
 					break
 				elif i == max_players_to_buy:
 					bottom_index = max_players_to_buy + top_index + 1
 			else:
 				bottom_index = i
-				top_few = sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"])
+				top_few = Decimal(sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"])).quantize(Decimal(".01"), rounding=ROUND_UP)
 				break
 			if i >= max_players_to_buy:
 				break
@@ -89,10 +133,6 @@ def predict_stocks_to_buy(date, current_money):
 		if no_of_shares == 0:
 			no_of_shares = 1
 		spent = top_few * no_of_shares
-		# print()
-		# print(f"Money spent: £{spent}")
-		# predicted_sales = sum(players_to_buy.iloc[0:length]["predicted48h"]) * no_of_shares
-		# print(f"Predicted profit: £{predicted_sales - spent}")
 		players_sold = players_to_buy.iloc[top_index:bottom_index]
 		sales = 0
 		for i in range(len(players_sold)):
@@ -106,30 +146,9 @@ def predict_stocks_to_buy(date, current_money):
 if __name__ == "__main__":
 	no_months = 1
 	dates_list = return_dates(no_months)
-	# save_media_scores(dates_list)
-	# for date in dates_list:
-	# 	print(date)
-	# 	test_scores = read_media_scores(date)
-	# 	save_player_prices(test_scores["player_name"])
-	# 	for i in range(len(test_scores)):
-	# 		compile_data(test_scores["player_name"].iloc[i], date)
 	
-	# all_data = read_compiled_data()
-	# average_money = 0
-	#
-	# no_of_iterations = 1
-	#
-	# for i in range(no_of_iterations):
-	# 	money = train_network(all_data, nn_optimal["hidden_layer_sizes"], solver=nn_optimal["solver"], activation=nn_optimal["activation"], max_iter=nn_optimal["max_iter"], tol=nn_optimal["tol"])
-	# 	if i == 0:
-	# 		average_money = money
-	# 	else:
-	# 		average_money += money
-	# average_money /= no_of_iterations
-	# print()
-	# print(f"Average money after training = £{'{0:.2f}'.format(average_money)}")
-	# train_network(all_data, nn_optimal["hidden_layer_sizes"], solver=nn_optimal["solver"], activation=nn_optimal["activation"], max_iter=nn_optimal["max_iter"], tol=nn_optimal["tol"])
-	# dates_list = dates_list[0:len(dates_list) // 2]
+	# train_price_predictor(2, solver="adam")
+
 	money = 1000
 	for date in dates_list[0:-3]:
 		print(date)
@@ -138,4 +157,4 @@ if __name__ == "__main__":
 		print()
 		money += change
 	
-	print(f"Total money after {no_months} month: £{money}")
+	print(f"Total money after {no_months} month(s): £{money}")
