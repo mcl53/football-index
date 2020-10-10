@@ -77,7 +77,7 @@ function updateTodaysPlayers(dateString) {
 function execute() {
     const dateStr = todaysDateString();
     console.log(`Beginning script for ${dateStr}`);
-    getNewMediaScores("20200805", updateTodaysPlayers);
+    getNewMediaScores(dateStr, updateTodaysPlayers);
 }
 
 execute();
