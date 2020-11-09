@@ -3,6 +3,7 @@ from dateutil import relativedelta
 from datetime import datetime, timedelta
 import pytz
 import secrets
+from decimal import Decimal, ROUND_UP
 
 
 def convert_date_to_str(date):
@@ -44,3 +45,7 @@ def return_dates(months_prior=0):
 		dates.append(this_date_string)
 
 	return dates
+
+
+def to_currency(value):
+	return Decimal(value).quantize(Decimal(".01"), rounding=ROUND_UP)

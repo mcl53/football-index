@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import pickle
 from secrets import nn_default, nn_optimal, timezone
-from utils import return_dates
+from utils import return_dates, to_currency
 from file_system import read_media_scores, read_player_prices
 import pprint
 from decimal import Decimal, ROUND_UP
@@ -53,34 +53,34 @@ def predict_stocks_to_buy(date, current_money, v=False):
 		if predicted_data[0] > end_price or predicted_data[1] > end_price:
 			buy_price = end_price
 			try:
-				actual24h = Decimal(data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0]).quantize(Decimal(".01"), rounding=ROUND_UP)
-				actual48h = Decimal(data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0]).quantize(Decimal(".01"), rounding=ROUND_UP)
+				actual24h = to_currency(data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0])
+				actual48h = to_currency(data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0])
 			except IndexError as e:
 				print(timestamp, player_name)
 				raise(e)
 			if predicted_data[0] >= predicted_data[1]:
 				sell_at = "actual24h"
-				percent_gain = Decimal(((predicted_data[0] - buy_price) / buy_price) * 100).quantize(Decimal(".01"), rounding=ROUND_UP)
-				gain = Decimal(predicted_data[0] - buy_price).quantize(Decimal(".01"), rounding=ROUND_UP)
+				percent_gain = to_currency(((predicted_data[0] - buy_price) / buy_price) * 100)
+				gain = to_currency(predicted_data[0] - buy_price)
 			else:
 				sell_at = "actual48h"
-				percent_gain = Decimal(((predicted_data[1] - buy_price) / buy_price) * 100).quantize(Decimal(".01"), rounding=ROUND_UP)
-				gain = Decimal(predicted_data[1] - buy_price).quantize(Decimal(".01"), rounding=ROUND_UP)
-			buy_price = Decimal(buy_price).quantize(Decimal(".01"), rounding=ROUND_UP)
+				percent_gain = to_currency(((predicted_data[1] - buy_price) / buy_price) * 100)
+				gain = to_currency(predicted_data[1] - buy_price)
+			buy_price = to_currency(buy_price)
 			append = pd.DataFrame([[player_name, buy_price, predicted_data[0], predicted_data[1], actual24h, actual48h, sell_at, percent_gain, gain]], columns=players_to_buy_columns)
 			players_to_buy = players_to_buy.append(append)
 		
 			if v:
-				end_price = Decimal(end_price).quantize(Decimal(".01"), rounding=ROUND_UP)
-				pred_buy_price = Decimal((max(predicted_data))).quantize(Decimal(".01"), rounding=ROUND_UP)
-				actual_buy_price = Decimal(max(
+				end_price = to_currency(end_price)
+				pred_buy_price = to_currency((max(predicted_data)))
+				actual_buy_price = to_currency(max(
 					[data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0],
 					data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0]]
-				)).quantize(Decimal(".01"), rounding=ROUND_UP)
-				pred_increase = Decimal(pred_buy_price - end_price).quantize(Decimal(".01"), rounding=ROUND_UP)
-				actual_increase = Decimal(actual_buy_price - end_price).quantize(Decimal(".01"), rounding=ROUND_UP)
-				pred_percentage = Decimal(pred_increase / end_price * 100).quantize(Decimal(".01"), rounding=ROUND_UP)
-				actual_percentage = Decimal(actual_increase / end_price * 100).quantize(Decimal(".01"), rounding=ROUND_UP)
+				))
+				pred_increase = to_currency(pred_buy_price - end_price)
+				actual_increase = to_currency(actual_buy_price - end_price)
+				pred_percentage = to_currency(pred_increase / end_price * 100)
+				actual_percentage = to_currency(actual_increase / end_price * 100)
 				if pred_buy_price > end_price:
 					if pred_buy_price == predicted_data[0]:
 						pred_buy = "24h"
@@ -106,7 +106,7 @@ def predict_stocks_to_buy(date, current_money, v=False):
 		
 	if len(players_to_buy) > 0:
 		players_to_buy = players_to_buy.sort_values(by="percent_gain", ascending=False)
-		spendable = Decimal(current_money / 5).quantize(Decimal(".01"), rounding=ROUND_UP)
+		spendable = to_currency(current_money / 5)
 		max_players_to_buy = 5
 		top_index = 0
 		top_few = 0
@@ -114,14 +114,14 @@ def predict_stocks_to_buy(date, current_money, v=False):
 		for i in range(len(players_to_buy)):
 			if players_to_buy.iloc[i]["percent_gain"] > 0.3 and players_to_buy.iloc[i]["actual_gain"] > 0.02:
 				bottom_index = i + 1
-				top_few = Decimal(sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"])).quantize(Decimal(".01"), rounding=ROUND_UP)
+				top_few = to_currency(sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"]))
 				if top_few > spendable:
 					break
 				elif i == max_players_to_buy:
 					bottom_index = max_players_to_buy + top_index + 1
 			else:
 				bottom_index = i
-				top_few = Decimal(sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"])).quantize(Decimal(".01"), rounding=ROUND_UP)
+				top_few = to_currency(sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"]))
 				break
 			if i >= max_players_to_buy:
 				break
