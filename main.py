@@ -5,8 +5,6 @@ import pickle
 from secrets import nn_default, nn_optimal, timezone
 from utils import return_dates, to_currency
 from file_system import read_media_scores, read_player_prices
-import pprint
-from decimal import Decimal, ROUND_UP
 from generate_models import train_price_predictor
 
 import warnings
@@ -46,8 +44,9 @@ def predict_stocks_to_buy(date, current_money, v=False):
 		except IndexError:
 			continue
 		media_score = media_scores.loc[media_scores["urlname"] == player_name]["score"].iloc[0]
+		score_sell = media_scores.loc[media_scores["urlname"] == player_name]["scoreSell"].iloc[0]
 		
-		test_data = pd.DataFrame([[start_price, end_price, media_score]], columns=["start_price", "end_price", "media_score"])
+		test_data = pd.DataFrame([[start_price, end_price, media_score, score_sell]], columns=["start_price", "end_price", "media_score", "score_sell"])
 		predicted_data = model.predict(test_data)[0]
 		
 		if predicted_data[0] > end_price or predicted_data[1] > end_price:
@@ -147,7 +146,7 @@ if __name__ == "__main__":
 	no_months = 1
 	dates_list = return_dates(no_months)
 	
-	# train_price_predictor(2, solver="adam")
+	train_price_predictor(2, solver="adam")
 
 	money = 1000
 	for date in dates_list[0:-3]:

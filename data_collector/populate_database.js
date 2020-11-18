@@ -5,7 +5,7 @@ const fs = require("fs");
 const csv = require("csv-parser");
 
 const firstMediaDate = new Date("2019-10-22");
-const maxApiRequests = 50;
+const maxApiRequests = 20;
 let currentApiRequests = 0;
 
 function dateToString(date) {
@@ -63,20 +63,20 @@ async function downloadAllPlayerPrices() {
         let data = readStream.pipe(csv());
         
         data.on("data", async row => {
-            if (currentApiRequests >= maxApiRequests) {
-                let sleepTimes = Math.floor(currentApiRequests / maxApiRequests);
-                await sleep(60000 * sleepTimes);
-            }
             if (!fs.existsSync(`../player_prices/${row.urlname}.csv`)) {
-                updatePlayerPrices(row.urlname);
                 currentApiRequests += 1;
+                if (currentApiRequests >= maxApiRequests) {
+                    let sleepTimes = Math.floor(currentApiRequests / maxApiRequests);
+                    await sleep(60000 * sleepTimes);
+                }
+                updatePlayerPrices(row.urlname);
             }
         });
     }
 }
 
 async function execute() {
-    await downloadAllMediaScores();
+    // await downloadAllMediaScores();
     downloadAllPlayerPrices();
 }
 

@@ -12,6 +12,7 @@
   "dependencies": {
     "csv-parser": "^2.3.3",
     "fs": "0.0.1-security",
+    "mongodb": "^3.6.3",
     "node-fetch": "^2.6.1"
   },
   "devDependencies": {

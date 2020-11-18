@@ -59,7 +59,7 @@ def read_all_data(dates_list=None):
 	if dates_list is None:
 		dates_list = utils.return_dates()
 	
-	all_data = pd.DataFrame(columns=["start_price", "end_price", "media_score", "24h", "48h"])
+	all_data = pd.DataFrame(columns=["start_price", "end_price", "media_score", "score_sell", "24h", "48h"])
 
 	for date in dates_list[0:-1]:
 		this_date_prices = price_changes_for_date(date, future_prices=True)

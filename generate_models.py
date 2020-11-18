@@ -16,7 +16,7 @@ def train_price_predictor(hidden_layer_sizes, activation=nn_default["activation"
 	random_state = randint(1, len(data))
 
 	X = data.drop(["24h", "48h"], axis=1)
-	y = data.drop(["start_price", "end_price", "media_score"], axis=1)
+	y = data.drop(["start_price", "end_price", "media_score", "score_sell"], axis=1)
 
 	X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.2, random_state=random_state)
 
@@ -28,6 +28,6 @@ def train_price_predictor(hidden_layer_sizes, activation=nn_default["activation"
 	with open("./price_prediction_model.p", "wb") as f:
 		pickle.dump(network, f)
 
- 
+
 if __name__ == "__main__":
 	train_price_predictor(nn_optimal["hidden_layer_sizes"])
