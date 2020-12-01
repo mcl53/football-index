@@ -3,19 +3,10 @@ const api = require("./fi_api_calls");
 const handlers = require("./api_response_handlers");
 const fs = require("fs");
 const csv = require("csv-parser");
+const utils = require("./utils");
 
-const firstMediaDate = new Date("2019-10-22");
 const maxApiRequests = 20;
 let currentApiRequests = 0;
-
-function dateToString(date) {
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = String(date.getFullYear());
-    const dateString = year + month + day;
-
-    return dateString;
-}
 
 function sleep(ms) {
     return new Promise(resolve => {
@@ -30,10 +21,10 @@ function getMediaScores(dateString) {
 }
 
 async function downloadAllMediaScores() {
-    let currentDate = firstMediaDate;
+    let currentDate = secrets.firstMediaDate;
     const todaysDate = new Date().setHours(0, 0, 0, 0);
     while (currentDate < todaysDate) {
-        let currentDateStr = dateToString(currentDate);
+        let currentDateStr = utils.dateToString(currentDate);
         getMediaScores(currentDateStr);
         currentApiRequests += 1;
         if (currentApiRequests >= maxApiRequests) {
@@ -51,11 +42,11 @@ function updatePlayerPrices(playerName) {
 }
 
 async function downloadAllPlayerPrices() {
-    let currentDate = firstMediaDate;
+    let currentDate = secrets.firstMediaDate;
     const todaysDate = new Date().setHours(0, 0, 0, 0);
 
     while (currentDate < todaysDate) {
-        let currentDateStr = dateToString(currentDate);
+        let currentDateStr = utils.dateToString(currentDate);
         let currentMediaFile = `../media_scores/${currentDateStr}.csv`;
         currentDate.setTime(currentDate.getTime() + 86400000);
         console.log(currentMediaFile);

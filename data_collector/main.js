@@ -7,15 +7,9 @@ const csv = require("csv-parser");
 let currentApiRequests = 0;
 const maxApiRequests = 10;
 
-function sleep(ms) {
-    return new Promise(resolve => {
-        setTimeout(resolve, ms);
-    });
-}
-
 function todaysDateString() {
     const todaysDate = new Date();
-    const day = String(todaysDate.getDate() - 1).padStart(2, "0");
+    const day = String(todaysDate.getDate() - 1).padStart(2, "0");  // Previous date is the latest info
     const month = String(todaysDate.getMonth() + 1).padStart(2, "0");
     const year = String(todaysDate.getFullYear());
     const dateString = year + month + day;
@@ -68,7 +62,7 @@ function updateTodaysPlayers(dateString) {
             currentApiRequests += 1;
             if (currentApiRequests > maxApiRequests) {
                 let sleepTimes = Math.floor(currentApiRequests / maxApiRequests);
-                await sleep(20000 * sleepTimes);
+                await utils.sleep(20000 * sleepTimes);
             }
             updatePlayerPrices(row.urlname);
         });
