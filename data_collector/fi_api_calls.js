@@ -1,5 +1,6 @@
 const secrets = require("./secrets");
 const fetch = require("node-fetch");
+const utils = require("./utils");
 
 async function sendRequest(url, responseHandler, resHandlerArgs) {
    const params = {
@@ -9,9 +10,9 @@ async function sendRequest(url, responseHandler, resHandlerArgs) {
 
    try {
     const encodedUrl = encodeURI(url);
-    console.log(`Sending request to ${url} at ${new Date().getTime()}`)
-    let response = await fetch(encodedUrl, {headers: params, compress: false});
+    console.log(`Sending request to ${url} at ${new Date().getTime()}`);
 
+    let response = await fetch(encodedUrl, {headers: params, compress: false});
     let data = await response.json();
     
     await responseHandler(data, resHandlerArgs);
@@ -20,4 +21,6 @@ async function sendRequest(url, responseHandler, resHandlerArgs) {
    }
 }
 
-module.exports.sendRequest = sendRequest;
+module.exports = {
+    sendRequest: sendRequest
+};
