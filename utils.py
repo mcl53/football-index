@@ -39,7 +39,7 @@ def return_dates(months_prior=0):
 	delta = date - first_date
 	dates = []
 
-	for i in range(1, delta.days + 1):
+	for i in range(0, delta.days + 1):
 		this_date = first_date + timedelta(days=i)
 		this_date_string = convert_date_to_str(this_date)
 		dates.append(this_date_string)

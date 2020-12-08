@@ -1,7 +1,6 @@
-import os
-from datetime import datetime
 import pandas as pd
 import utils
+import mongo
 
 
 def read_player_prices(player):
@@ -15,7 +14,7 @@ def read_media_scores(date):
 
 
 def price_changes_for_date(datestr, future_prices=False):
-	media_scores = read_media_scores(datestr)
+	media_scores = mongo.read_media_scores(datestr)
 	start_ts = utils.convert_datestr_to_timestamp(datestr)
 	end_ts = start_ts + 86400
 
@@ -33,7 +32,7 @@ def price_changes_for_date(datestr, future_prices=False):
 		media_score = player[1]["score"]
 		score_sell = player[1]["scoreSell"]
 
-		player_prices = read_player_prices(player_name)
+		player_prices = mongo.read_player_prices(player_name)
 
 		try:
 			start_price = player_prices[player_prices["timestamp"] == start_ts]["close"].iloc[0]
@@ -62,6 +61,7 @@ def read_all_data(dates_list=None):
 	all_data = pd.DataFrame(columns=["start_price", "end_price", "media_score", "score_sell", "24h", "48h"])
 
 	for date in dates_list[0:-1]:
+		print(date)
 		this_date_prices = price_changes_for_date(date, future_prices=True)
 		all_data = all_data.append(this_date_prices, ignore_index=True)
 	

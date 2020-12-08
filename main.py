@@ -4,7 +4,7 @@ import pandas as pd
 import pickle
 from secrets import nn_default, nn_optimal, timezone
 from utils import return_dates, to_currency
-from file_system import read_media_scores, read_player_prices
+from mongo import read_media_scores, read_player_prices
 from generate_models import train_price_predictor
 
 import warnings
@@ -146,7 +146,7 @@ if __name__ == "__main__":
 	no_months = 1
 	dates_list = return_dates(no_months)
 	
-	train_price_predictor(2, solver="adam")
+	# train_price_predictor(2, solver="adam")
 
 	money = 1000
 	for date in dates_list[0:-3]:
@@ -155,5 +155,7 @@ if __name__ == "__main__":
 		print(f"Actual profit: £{change}")
 		print()
 		money += change
-	
+
 	print(f"Total money after {no_months} month(s): £{money}")
+
+
