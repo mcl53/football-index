@@ -3,7 +3,6 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import train_test_split
 import pickle
 from secrets import nn_default, nn_optimal
-from utils import return_dates
 from file_system import read_all_data
 
 import warnings
@@ -16,7 +15,7 @@ def train_price_predictor(hidden_layer_sizes, activation=nn_default["activation"
 	random_state = randint(1, len(data))
 
 	X = data.drop(["24h", "48h"], axis=1)
-	y = data.drop(["start_price", "end_price", "media_score", "score_sell"], axis=1)
+	y = data.drop(["start_price", "end_price", "media_score"], axis=1)
 
 	X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.2, random_state=random_state)
 

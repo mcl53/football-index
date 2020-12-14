@@ -23,7 +23,7 @@ function dateToString(date) {
     return dateString;
 }
 
-async function getNewMediaScores(dateString, dbCallback) {
+async function getNewMediaScores(dateString) {
     url = `${secrets.media_scores_endpoint}${dateString}${secrets.media_scores_extra_params}`;
 
     await api.sendRequest(url, mongoHandlers.saveMediaScores, dateString);
@@ -39,9 +39,10 @@ async function getNewMediaScores(dateString, dbCallback) {
     let yesterdayStr = dateToString(yesterday);
     let dayBeforeStr = dateToString(dayBefore);
 
-    utils.useDb(dbCallback, dateString);
-    utils.useDb(dbCallback, yesterdayStr);
-    utils.useDb(dbCallback, dayBeforeStr);
+    utils.useDb(updateTodaysPlayers, dateString);
+    utils.useDb(updateTodaysPlayers, yesterdayStr);
+    utils.useDb(updateTodaysPlayers, dayBeforeStr);
+
 }
 
 async function updatePlayerPrices(playerName) {
@@ -61,14 +62,15 @@ async function updateTodaysPlayers(db, dateString) {
     mediaScores = await mediaScoresCollection.findOne({date: dateString});
 
     mediaScores.scores.forEach(score => {
+        // give data to this function and do stuff in there
         updatePlayerPrices(score.urlname);
     });
 }
 
-function execute() {
+async function execute() {
     const dateStr = todaysDateString();
     console.log(`Beginning script for ${dateStr}`);
-    getNewMediaScores(dateStr, updateTodaysPlayers);
+    getNewMediaScores(dateStr);
 }
 
 execute();

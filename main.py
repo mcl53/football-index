@@ -1,5 +1,4 @@
 import datetime
-import os
 import pandas as pd
 import pickle
 from secrets import nn_default, nn_optimal, timezone
@@ -14,8 +13,15 @@ import pytz
 tz = pytz.timezone(timezone)
 
 
-def predict_stocks_to_buy(date, current_money, v=False):
-	
+def get_price_for_timestamp(data, timestamp):
+	return data.loc[data["timestamp"] == timestamp]["close"].iloc[0]
+
+
+def get_media_attribute(data, name, attribute):
+	return data.loc[data["urlname"] == name][attribute].iloc[0]
+
+
+def get_timestamp_for_date(date):
 	year = int(date[0:4])
 	month = int(date[4:6])
 	day = int(date[6:])
@@ -23,6 +29,13 @@ def predict_stocks_to_buy(date, current_money, v=False):
 	global tz
 	tz_aware = tz.localize(date_obj, is_dst=None)
 	timestamp = datetime.datetime.timestamp(date_obj) + tz_aware.tzinfo._dst.seconds
+	
+	return timestamp
+
+
+def predict_stocks_to_buy(date, current_money, v=False):
+	
+	timestamp = get_timestamp_for_date(date)
 	
 	media_scores = read_media_scores(date)
 	
@@ -39,24 +52,26 @@ def predict_stocks_to_buy(date, current_money, v=False):
 	for player_name in media_scores["urlname"]:
 		data = read_player_prices(player_name)
 		try:
-			start_price = data.loc[data["timestamp"] == timestamp]["close"].iloc[0]
-			end_price = data.loc[data["timestamp"] == (timestamp + 86400)]["close"].iloc[0]
+			start_price = get_price_for_timestamp(data, timestamp)
+			end_price = get_price_for_timestamp(data, timestamp + 86400)
 		except IndexError:
 			continue
-		media_score = media_scores.loc[media_scores["urlname"] == player_name]["score"].iloc[0]
-		score_sell = media_scores.loc[media_scores["urlname"] == player_name]["scoreSell"].iloc[0]
+		media_score = get_media_attribute(media_scores, player_name, "score")
+		# score_sell = get_media_attribute(media_scores, player_name, "scoreSell")
 		
-		test_data = pd.DataFrame([[start_price, end_price, media_score, score_sell]], columns=["start_price", "end_price", "media_score", "score_sell"])
+		test_data = pd.DataFrame([[start_price, end_price, media_score]], columns=["start_price", "end_price", "media_score"])
 		predicted_data = model.predict(test_data)[0]
+		print(test_data)
+		print(predicted_data)
 		
 		if predicted_data[0] > end_price or predicted_data[1] > end_price:
 			buy_price = end_price
 			try:
-				actual24h = to_currency(data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0])
-				actual48h = to_currency(data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0])
+				actual24h = to_currency(get_price_for_timestamp(data, timestamp + 86400 * 2))
+				actual48h = to_currency(get_price_for_timestamp(data, timestamp + 86400 * 3))
 			except IndexError as e:
 				print(timestamp, player_name)
-				raise(e)
+				raise e
 			if predicted_data[0] >= predicted_data[1]:
 				sell_at = "actual24h"
 				percent_gain = to_currency(((predicted_data[0] - buy_price) / buy_price) * 100)
@@ -72,10 +87,10 @@ def predict_stocks_to_buy(date, current_money, v=False):
 			if v:
 				end_price = to_currency(end_price)
 				pred_buy_price = to_currency((max(predicted_data)))
-				actual_buy_price = to_currency(max(
-					[data.loc[data["timestamp"] == (timestamp + (86400 * 2))]["close"].iloc[0],
-					data.loc[data["timestamp"] == (timestamp + (86400 * 3))]["close"].iloc[0]]
-				))
+				actual_buy_price = to_currency(max([
+					get_price_for_timestamp(data, timestamp + 86400 * 2),
+					get_price_for_timestamp(data, timestamp + 86400 * 3)
+				]))
 				pred_increase = to_currency(pred_buy_price - end_price)
 				actual_increase = to_currency(actual_buy_price - end_price)
 				pred_percentage = to_currency(pred_increase / end_price * 100)
@@ -146,12 +161,12 @@ if __name__ == "__main__":
 	no_months = 1
 	dates_list = return_dates(no_months)
 	
-	# train_price_predictor(2, solver="adam")
+	# train_price_predictor(nn_optimal["hidden_layer_sizes"], solver=nn_optimal["solver"])
 
 	money = 1000
 	for date in dates_list[0:-3]:
 		print(date)
-		change = predict_stocks_to_buy(date, money)
+		change = predict_stocks_to_buy(date, money, v=True)
 		print(f"Actual profit: £{change}")
 		print()
 		money += change

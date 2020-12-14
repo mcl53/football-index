@@ -87,37 +87,97 @@ function writePlayerDataFile(filename) {
         });
 }
 
-async function writeToMediaScores(db, object) {
+async function crossData() {
+    let mediaScores = await utils.useDb(getMediaDataForCross);
+    let players = await utils.useDb(getPlayerDataForCross);
+
+    let writeData = []
+    
+    mediaScores.forEach(day => {
+        let obj = {date: day.date, data: []}
+        let timestamp = utils.datestrToDate(day.date).getTime();
+        day.scores.forEach(playerScore => {
+            let player_prices = players.find(player => player.player_name = playerScore.urlname);
+            let playerObj = {
+                name: player_prices.player_name,
+                start_price: player_prices.price_history.find(time => time = timestamp).close,
+                end_price: player_prices.price_history.find(time => time = timestamp + 86400000).close,
+                "24h": player_prices.price_history.find(time => time = timestamp + 86400000 * 2).close,
+                "48h": player_prices.price_history.find(time => time = timestamp + 86400000 * 3).close
+            };
+
+            obj.data.push(playerObj);
+        });
+        writeData.push(obj);
+    });
+    utils.useDb(writeAllTrainingData, writeData);
+}
+
+async function writeToMediaScores(db, obj) {
     const mediaCollection = await db.collection("media-scores");
-    let result = await mediaCollection.insertOne(object);
+    let result = await mediaCollection.insertOne(obj);
     if (result.insertedCount != 1) {
         console.log(result);
     }
 }
 
-async function writeToPlayerData(db, object) {
+async function writeToPlayerData(db, obj) {
     const playersCollection = await db.collection("players");
-    let result = await playersCollection.insertOne(object);
+    let result = await playersCollection.insertOne(obj);
     if (result.ok != 1) {
         console.log(result);
     }
 }
 
-async function updatePlayerData(db, query, object) {
-    const playersCollection = await db.collection("players");
-    let result = await playersCollection.findOneAndUpdate(query, {$set: object}, {upsert: true});
+async function writeToTrainingData(db, obj) {
+    const trainingCollection = await db.collection("training-data");
+    let result = await trainingCollection.insertOne(obj);
     if (result.ok != 1) {
         console.log(result);
     }
+}
+
+async function writeAllTrainingData(db, arr) {
+    const trainingCollection = await db.collection("training-data");
+    let result = await trainingCollection.insertMany(arr);
+    if (result.result.ok != 1) {
+        console.log(result);
+    }
+}
+
+async function updatePlayerData(db, query, obj) {
+    const playersCollection = await db.collection("players");
+    let result = await playersCollection.findOneAndUpdate(query, {$set: obj}, {upsert: true});
+    if (result.ok != 1) {
+        console.log(result);
+    }
+}
+
+async function getMediaDataForCross(db) {
+    const mediaCollection = await db.collection("media-scores");
+    const cursor = await mediaCollection.find({}, {_id: 0, "scores.name": 0, "scores.scoreSell": 0});
+    const result = await cursor.toArray();
+    
+    return result;
+}
+
+async function getPlayerDataForCross(db) {
+    const playerCollection = await db.collection("players");
+    const cursor = await playerCollection.find({}, {_id: 0});
+    const result = await cursor.toArray();
+
+    return result;
 }
 
 if (require.main === module) {
     writeAllMediaScoresToDb();
     writeAllPlayerDataToDb();
+    crossData();
 }
 
 module.exports = {
     writeToMediaScores: writeToMediaScores,
     writeToPlayerData: writeToPlayerData,
-    updatePlayerData: updatePlayerData
+    updatePlayerData: updatePlayerData,
+    writeToTrainingData: writeToTrainingData
 };
