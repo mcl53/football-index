@@ -6,6 +6,7 @@ client = pymongo.MongoClient("mongodb://127.0.0.1:27017")
 db = client["football-index"]
 media_scores_collection = db["media-scores"]
 players_collection = db["players"]
+training_collection = db["training-data"]
 
 
 def read_player_prices(player):
@@ -26,6 +27,18 @@ def read_media_scores(date):
 	df = pd.json_normalize(media_scores)
 	
 	return df
+
+
+def read_training_data():
+	training_data = list(training_collection.find({}, {"_id": 0, "data": 1}))
+	new_list = []
+	for i in training_data:
+		for obj in i["data"]:
+			new_list.append(obj)
+	
+	df = pd.json_normalize(new_list)
+	
+	return df
 	
 
 if __name__ == "__main__":
@@ -33,3 +46,5 @@ if __name__ == "__main__":
 	print(test)
 	test2 = read_media_scores("20201206")
 	print(test2)
+	test3 = read_training_data()
+	print(test3)

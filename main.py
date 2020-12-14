@@ -57,12 +57,9 @@ def predict_stocks_to_buy(date, current_money, v=False):
 		except IndexError:
 			continue
 		media_score = get_media_attribute(media_scores, player_name, "score")
-		# score_sell = get_media_attribute(media_scores, player_name, "scoreSell")
 		
 		test_data = pd.DataFrame([[start_price, end_price, media_score]], columns=["start_price", "end_price", "media_score"])
 		predicted_data = model.predict(test_data)[0]
-		print(test_data)
-		print(predicted_data)
 		
 		if predicted_data[0] > end_price or predicted_data[1] > end_price:
 			buy_price = end_price
@@ -81,7 +78,8 @@ def predict_stocks_to_buy(date, current_money, v=False):
 				percent_gain = to_currency(((predicted_data[1] - buy_price) / buy_price) * 100)
 				gain = to_currency(predicted_data[1] - buy_price)
 			buy_price = to_currency(buy_price)
-			append = pd.DataFrame([[player_name, buy_price, predicted_data[0], predicted_data[1], actual24h, actual48h, sell_at, percent_gain, gain]], columns=players_to_buy_columns)
+			append = pd.DataFrame([[player_name, buy_price, predicted_data[0], predicted_data[1], actual24h, actual48h,
+									sell_at, percent_gain, gain]], columns=players_to_buy_columns)
 			players_to_buy = players_to_buy.append(append)
 		
 			if v:
@@ -111,7 +109,8 @@ def predict_stocks_to_buy(date, current_money, v=False):
 				else:
 					actual_buy = None
 					
-				player_info = pd.DataFrame([[player_name, pred_increase, actual_increase, pred_percentage, actual_percentage, pred_buy, actual_buy]], columns=print_columns)
+				player_info = pd.DataFrame([[player_name, pred_increase, actual_increase, pred_percentage, actual_percentage,
+											pred_buy, actual_buy]], columns=print_columns)
 				print_info = print_info.append(player_info)
 	
 	if v:
@@ -122,35 +121,26 @@ def predict_stocks_to_buy(date, current_money, v=False):
 		players_to_buy = players_to_buy.sort_values(by="percent_gain", ascending=False)
 		spendable = to_currency(current_money / 5)
 		max_players_to_buy = 5
-		top_index = 0
-		top_few = 0
-		bottom_index = 0
+		players_to_buy = players_to_buy[players_to_buy.percent_gain > 0.3]
+		players_to_buy = players_to_buy[players_to_buy.actual_gain > 0.02]
+		if len(players_to_buy) > max_players_to_buy:
+			players_to_buy = players_to_buy[0: max_players_to_buy]
+		
+		to_spend = 0
 		for i in range(len(players_to_buy)):
-			if players_to_buy.iloc[i]["percent_gain"] > 0.3 and players_to_buy.iloc[i]["actual_gain"] > 0.02:
-				bottom_index = i + 1
-				top_few = to_currency(sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"]))
-				if top_few > spendable:
-					break
-				elif i == max_players_to_buy:
-					bottom_index = max_players_to_buy + top_index + 1
-			else:
-				bottom_index = i
-				top_few = to_currency(sum(players_to_buy.iloc[top_index:bottom_index]["buy_price"]))
-				break
-			if i >= max_players_to_buy:
+			to_spend += players_to_buy.iloc[i]["buy_price"]
+			if to_spend >= spendable:
+				players_to_buy = players_to_buy[0: i + 1]
 				break
 				
-		if top_few == 0:
+		if to_spend == 0:
 			return 0
 		
-		no_of_shares = spendable // top_few
-		if no_of_shares == 0:
-			no_of_shares = 1
-		spent = top_few * no_of_shares
-		players_sold = players_to_buy.iloc[top_index:bottom_index]
+		no_of_shares = spendable // to_spend
+		spent = to_spend * no_of_shares
 		sales = 0
-		for i in range(len(players_sold)):
-			sales += players_sold.iloc[i].loc[players_sold.iloc[i]["sell_at"]]
+		for i in range(len(players_to_buy)):
+			sales += players_to_buy.iloc[i].loc[players_to_buy.iloc[i]["sell_at"]]
 		sales *= no_of_shares
 		
 		return sales - spent
@@ -161,12 +151,12 @@ if __name__ == "__main__":
 	no_months = 1
 	dates_list = return_dates(no_months)
 	
-	# train_price_predictor(nn_optimal["hidden_layer_sizes"], solver=nn_optimal["solver"])
+	train_price_predictor()
 
 	money = 1000
 	for date in dates_list[0:-3]:
 		print(date)
-		change = predict_stocks_to_buy(date, money, v=True)
+		change = predict_stocks_to_buy(date, money)
 		print(f"Actual profit: £{change}")
 		print()
 		money += change

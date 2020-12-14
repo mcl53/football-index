@@ -53,21 +53,6 @@ def price_changes_for_date(datestr, future_prices=False):
 	return date_info
 
 
-def read_all_data(dates_list=None):
-	if dates_list is None:
-		dates_list = utils.return_dates()
-	
-	all_data = pd.DataFrame(columns=["start_price", "end_price", "media_score", "24h", "48h"])
-	
-	print("Beginning to read data")
-	for i, date in enumerate(dates_list[0:-1]):
-		print(f"{round(i / len(dates_list) * 100, 1)}%")
-		this_date_prices = price_changes_for_date(date, future_prices=True)
-		all_data = all_data.append(this_date_prices, ignore_index=True)
-	
-	return all_data
-
-
 if __name__ == "__main__":
 	standard = price_changes_for_date("20200701")
 	with_future_prices = price_changes_for_date("20200701", future_prices=True)

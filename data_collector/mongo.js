@@ -99,9 +99,9 @@ async function crossData() {
         day.scores.forEach(playerScore => {
             let player_prices = players.find(player => player.player_name = playerScore.urlname);
             let playerObj = {
-                name: player_prices.player_name,
                 start_price: player_prices.price_history.find(time => time = timestamp).close,
                 end_price: player_prices.price_history.find(time => time = timestamp + 86400000).close,
+                media_score: playerScore.score,
                 "24h": player_prices.price_history.find(time => time = timestamp + 86400000 * 2).close,
                 "48h": player_prices.price_history.find(time => time = timestamp + 86400000 * 3).close
             };
